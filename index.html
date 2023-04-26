@@ -10,7 +10,7 @@
     <button id="load-files" class="center-screen">Load Files</button>
     <input type="file" id="file-input" multiple style="display:none;">
 
-    <div class="dashboard" id="dashboard" style="display:none;">
+    <div id="dashboard" class="dashboard" style="display:none;">
         <div class="sidebar">
             <button id="select-all">Select All</button>
             <button id="select-none">Select None</button>
@@ -18,7 +18,8 @@
         </div>
         <div class="charts">
             <div id="chart-container-1" class="chart-container"></div>
-            <div id="chart-container-2" class="chart-container"></div>
+            <label for="moving-average-window">Moving Average Window Size:</label>
+            <input type="number" id="moving-average-window" name="moving-average-window" min="1" value="7">
         </div>
     </div>
     

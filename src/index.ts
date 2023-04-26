@@ -12,6 +12,13 @@ const itemList = document.getElementById('item-list') as HTMLElement;
 // Global Function
 const loadedData: any[] = [];
 
+// Plots dashboards
+interface DashboardCharts {
+  chart1: echarts.ECharts;
+  //chart2: echarts.ECharts;
+}
+let dashboardCharts: DashboardCharts | undefined;
+
 // Event Listeners
 
 // Loads Button
@@ -46,7 +53,6 @@ itemList.addEventListener('change', () => {
   updateGraphs();
 });
 
-// Redraw Graphs if item input files change
 fileInput.addEventListener('change', async (event) => {
   const files = (event.target as HTMLInputElement).files;
   if (!files) return;
@@ -59,10 +65,13 @@ fileInput.addEventListener('change', async (event) => {
     }
   }
 
+  // Add this line to sort the loadedData by date
+  loadedData.sort((a: any, b: any) => new Date(a["Date"]).getTime() - new Date(b["Date"]).getTime());
+
   console.log("there are " + loadedData.length + " entires.");
   console.log(loadedData);
 
-  createDashboard(loadedData);
+  dashboardCharts = createDashboard(loadedData, 7);
 
   // Wrap the style changes in an async function and call it
   async function updateStyles() {
@@ -71,7 +80,10 @@ fileInput.addEventListener('change', async (event) => {
   }
 
   updateStyles();
+  resizeCharts(dashboardCharts);
+  window.dispatchEvent(new Event('resize'));
 });
+
 
 // Utilty functions: 
 async function readAndParseCSVFile(file: File): Promise<any[]> {
@@ -97,11 +109,12 @@ function createItemIdNameMap(data: any[]): Map<string, string> {
     var itemName = row["Item Name"];
 
     if (!itemIdNameMap.has(itemId) || (itemIdNameMap.has(itemId) && itemIdNameMap.get(itemId) != itemId)) {
-      if (itemName.split("-").length > 0) {
-        itemName = itemName.split('-')[1]
+      var cleanedItemName = itemName;
+      if (cleanedItemName.includes("Battlefields of Tomorrow - ")) {
+        cleanedItemName = cleanedItemName.split("Battlefields of Tomorrow - ")[1]
       }
 
-      itemIdNameMap.set(itemId, itemName);
+      itemIdNameMap.set(itemId, cleanedItemName);
     }
   }
 
@@ -141,6 +154,7 @@ function createItemList(itemIdNameMap: Map<string, string>) {
   }
 }
 
+// Updating the graphs with the right content.
 function updateGraphs() {
   // Get the selected items from the list
   const selectedItems = new Set<string>();
@@ -150,44 +164,187 @@ function updateGraphs() {
   });
 
   // Filter the data based on the selected items
-  const filteredData = loadedData.filter((row) => selectedItems.has(row["Item Name"]));
+  const filteredData = loadedData.filter((row: any) => selectedItems.has(row["Item Name"]));
 
-  // Call the function to update the graphs with the filtered data
-  createDashboard(filteredData);
+  // Get the moving average window size from the input field
+  const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
+  const windowSize = parseInt(movingAverageWindowInput.value) || 7;
+
+  // Call the function to update the graphs with the filtered data and the moving average window size
+  dashboardCharts = createDashboard(filteredData, windowSize);
+  resizeCharts(dashboardCharts);
+  window.dispatchEvent(new Event('resize'));
 }
 
-function createDashboard(data: any) {
 
-  // Creating the list of products: 
-  var productsList = createItemIdNameMap(data);
+function createDashboard(data: any, windowSize: number) {
+  // Creating the list of products:
+  const productsList = createItemIdNameMap(data);
   console.log("products list: " + productsList);
 
-  var usersList = createUserCountryMap(data);
+  const usersList = createUserCountryMap(data);
   console.log("users list: " + usersList);
 
   createItemList(productsList);
 
+  // Preparing the data for the charts:
+  const profits = data.map((row: any) => Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]));
+  console.log("profits:" + profits);
+  //const dates = data.map((row: any) => row["Date"]).map((timestamp : any) => timestamp.split(' ').join('T') + "Z");
+  const dates = data.map((row: any) => new Date(row["Date"]));
+
+  // Calculate the cumulative profits
+  const cumulativeProfits = profits.map((value: number, index: number) => {
+    return profits.slice(0, index + 1).reduce((a: number, b: number) => a + b, 0);
+  });
+  //console.log("profits:" + cumulativeProfits);
+
+  const movingAverageProfits = profits.map((value: number, index: number, array: number[]) => {
+    const start = Math.max(0, index - windowSize + 1);
+    const end = index;
+    const windowData = array.slice(start, end + 1);
+    const average = windowData.reduce((a: number, b: number) => a + b, 0) / windowData.length;
+    return average;
+  });
+
   // Preparing the plots layout:
   const chartContainer1 = document.getElementById('chart-container-1');
-  const chartContainer2 = document.getElementById('chart-container-2');
+  //const chartContainer2 = document.getElementById('chart-container-2');
 
   const chart1 = echarts.init(chartContainer1 as HTMLElement);
-  const chart2 = echarts.init(chartContainer2 as HTMLElement);
+  //const chart2 = echarts.init(chartContainer2 as HTMLElement);
 
   const option1 = {
-    // Configure your first chart's options here
-  };
+    title: {
+      text: 'Selected Products Profits',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        animation: false
+      }
+    },
+    legend: {
+      data: ['Cumulative', 'Averaged'],
+      left: 10
+    },
+    toolbox: {
+      feature: {
+        dataZoom: {
+          yAxisIndex: 'none'
+        },
+        restore: {},
+        saveAsImage: {}
+      }
+    },
+    axisPointer: {
+      link: [
+        {
+          xAxisIndex: 'all'
+        }
+      ]
+    },
+    dataZoom: [
+      {
+        show: true,
+        realtime: true,
+        start: 0,
+        end: 100,
+        xAxisIndex: [0, 1]
+      },
+      {
+        type: 'inside',
+        realtime: true,
+        start: 0,
+        end: 100,
+        xAxisIndex: [0, 1]
+      }
+    ],
+    grid: [
+      {
+        left: '5%',
+        right: '5%',
+        top: '15%',
+        height: '35%',
+        containLabel: true,
+      },
+      {
+        left: '5%',
+        right: '5%',
+        top: '55%',
+        height: '35%',
+        containLabel: true,
+      },
+    ],
 
-  const option2 = {
-    // Configure your second chart's options here
-  };
+    xAxis: [
+      {
+        type: 'category',
+        boundaryGap: false,
+        axisLine: { onZero: true },
+        data: dates
+      },
+      {
+        gridIndex: 1,
+        type: 'category',
+        boundaryGap: false,
+        axisLine: { onZero: true },
+        data: dates,
+        position: 'top'
+      }
+    ],
+    yAxis: [
+      {
+        name: 'Total Profit ($)',
+        type: 'value',
+      },
+      {
+        gridIndex: 1,
+        name: 'Daily Average Profit ($)',
+        type: 'value',
+        inverse: true
+      }
+    ],
+
+  series: [
+    {
+      name: 'Cumulative Profit',
+      type: 'line',
+      symbolSize: 8,
+      // prettier-ignore
+      data: cumulativeProfits
+    },
+    {
+      name: 'Daily Profit averaged',
+      type: 'line',
+      xAxisIndex: 1,
+      yAxisIndex: 1,
+      symbolSize: 8,
+      // prettier-ignore
+      data: movingAverageProfits
+    }
+  ]
+};
+
 
   chart1.setOption(option1);
-  chart2.setOption(option2);
+  //chart2.setOption(option2);
 
-  // Add resize event listener to make the charts responsive
-  window.addEventListener('resize', () => {
-    chart1.resize();
-    chart2.resize();
-  });
+  //return { chart1, chart2 };
+  return { chart1 };
 }
+
+
+function resizeCharts(charts: DashboardCharts) {
+  if (dashboardCharts && dashboardCharts.chart1) {
+    dashboardCharts.chart1.resize();
+  }
+}
+
+
+window.addEventListener('resize', () => {
+  if (dashboardCharts) {
+    resizeCharts(dashboardCharts);
+  }
+});
