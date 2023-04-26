@@ -7,7 +7,17 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <button id="load-files" class="center-screen">Load Files</button>
+    <div id="welcome-container" class="center-screen" >
+        <style >p {text-align: center;}</style >
+        <p>
+            Welcome to my parser for the MMF .csv files. <br>
+            Download your .csv files from MMF and upload them here to get <br>
+            a more interactive and comprehensive view of the sales. <br>
+            Needless to say, we are *not* storing any data that is being uploaded. <br>
+            In fact, you can host this yourself, the code is on the <a href="https://github.com/thelazyone/mmf-charts">Github repo</a>.
+        </p>
+        <button id="load-files">Load Files</button>
+    </div>  
     <input type="file" id="file-input" multiple style="display:none;">
 
     <div id="dashboard" class="dashboard" style="display:none;">

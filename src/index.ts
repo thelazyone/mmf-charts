@@ -8,6 +8,7 @@ const earningString = "Creator Net Earnings Amount (Item Price - 8% Commission -
 
 // HTML elements
 const loadFilesButton = document.getElementById('load-files') as HTMLButtonElement;
+const welcomeContainer = document.getElementById('welcome-container') as HTMLButtonElement;
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
 const dashboardContainer = document.getElementById('dashboard') as HTMLElement;
 const selectAllButton = document.getElementById('select-all') as HTMLElement;
@@ -91,6 +92,7 @@ fileInput.addEventListener('change', async (event) => {
 
   // Wrap the style changes in an async function and call it
   async function updateStyles() {
+    welcomeContainer.style.display = 'none';
     loadFilesButton.style.display = 'none';
     dashboardContainer.style.display = 'flex';
   }
@@ -323,7 +325,7 @@ function createDashboard(data: any, windowSize: number) {
 
   const option1 = {
     title: {
-      text: 'Selected Products Profits (' + firstProductSale + " - " + lastProductSale + ")",
+      text: 'Selected Products Profits\n(' + firstProductSale + " - " + lastProductSale + ")",
       left: 'center'
     },
     tooltip: {

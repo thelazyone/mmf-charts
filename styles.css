@@ -67,3 +67,10 @@ body {
   .item-table th {
     font-weight: bold;
   }
+
+  #welcome-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem; /* Adjust the space between the text and the button */
+  }
