@@ -14,6 +14,7 @@ const selectNoneButton = document.getElementById('select-none') as HTMLElement;
 const recalculateButton = document.getElementById('recalculate') as HTMLElement;
 const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
 const itemList = document.getElementById('item-list') as HTMLElement;
+const searchInput = document.getElementById('search-input') as HTMLInputElement;
 
 // Global objects:
 const loadedData: any[] = [];
@@ -102,6 +103,19 @@ fileInput.addEventListener('change', async (event) => {
   createItemList(productsList);
 });
 
+searchInput.addEventListener('input', () => {
+  const searchValue = searchInput.value.toLowerCase();
+  const labels = itemList.getElementsByTagName('label');
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i];
+    const itemName = label.textContent ? label.textContent.toLowerCase() : '';
+    if (itemName.includes(searchValue)) {
+      label.style.display = '';
+    } else {
+      label.style.display = 'none';
+    }
+  }
+});
 
 // Utilty functions: 
 async function readAndParseCSVFile(file: File): Promise<any[]> {
@@ -158,6 +172,12 @@ function createUserCountryMap(data: any[]): Map<string, string> {
 function createItemList(itemIdNameMap: Map<string, string>) {
   const itemList = document.getElementById('item-list') as HTMLElement;
 
+  // NEW: Add container to wrap the list
+  const listContainer = document.createElement('div');
+  listContainer.style.overflowY = 'scroll';
+  listContainer.style.maxHeight = 'calc(100vh - 200px)';
+  itemList.appendChild(listContainer);
+
   // Fill the item list with item names
   for (const itemName of itemIdNameMap.values()) {
     const label = document.createElement('label');
@@ -167,8 +187,8 @@ function createItemList(itemIdNameMap: Map<string, string>) {
     input.checked = true;
     label.appendChild(input);
     label.appendChild(document.createTextNode(itemName));
-    itemList.appendChild(label);
-    itemList.appendChild(document.createElement('br'));
+
+    listContainer.appendChild(label); // NEW: Append label to listContainer instead of itemList
   }
 }
 

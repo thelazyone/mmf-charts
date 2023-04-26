@@ -43,3 +43,10 @@ body {
     border: 1px solid #ccc;
   }
   
+  .item-list label {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
