@@ -7,6 +7,7 @@ const fileInput = document.getElementById('file-input') as HTMLInputElement;
 const dashboardContainer = document.getElementById('dashboard') as HTMLElement;
 const selectAllButton = document.getElementById('select-all') as HTMLElement;
 const selectNoneButton = document.getElementById('select-none') as HTMLElement;
+const recalculateButton = document.getElementById('recalculate') as HTMLElement;
 const itemList = document.getElementById('item-list') as HTMLElement;
 
 // Global Function
@@ -47,10 +48,16 @@ selectNoneButton.addEventListener('click', () => {
   updateGraphs();
 });
 
+// Recalculate Button
+recalculateButton.addEventListener('click', () => {
+  // Call the function to regenerate the graphs based on the selected items
+  updateGraphs();
+});
+
 // Redraw Graphs if item list updates
 itemList.addEventListener('change', () => {
   // Call the function to regenerate the graphs based on the selected items
-  updateGraphs();
+  //updateGraphs();
 });
 
 fileInput.addEventListener('change', async (event) => {
@@ -82,6 +89,11 @@ fileInput.addEventListener('change', async (event) => {
   updateStyles();
   resizeCharts(dashboardCharts);
   window.dispatchEvent(new Event('resize'));
+
+  // Creating the list of products and users:
+  const productsList = createItemIdNameMap(loadedData);
+  const usersList = createUserCountryMap(loadedData);
+  createItemList(productsList);
 });
 
 
@@ -165,6 +177,7 @@ function updateGraphs() {
 
   // Filter the data based on the selected items
   const filteredData = loadedData.filter((row: any) => selectedItems.has(row["Item Name"]));
+  console.log("filteredData has " + filteredData.length + "items");
 
   // Get the moving average window size from the input field
   const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
@@ -178,15 +191,6 @@ function updateGraphs() {
 
 
 function createDashboard(data: any, windowSize: number) {
-  // Creating the list of products:
-  const productsList = createItemIdNameMap(data);
-  console.log("products list: " + productsList);
-
-  const usersList = createUserCountryMap(data);
-  console.log("users list: " + usersList);
-
-  createItemList(productsList);
-
   // Preparing the data for the charts:
   const profits = data.map((row: any) => Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]));
   console.log("profits:" + profits);
@@ -194,8 +198,8 @@ function createDashboard(data: any, windowSize: number) {
   const dates = data.map((row: any) => new Date(row["Date"]));
 
   // Defining the new temporal steps: 
-  const startDate = new Date(loadedData[0]["Date"]);
-  const endDate = new Date(loadedData[loadedData.length - 1]["Date"]);
+  const startDate = new Date(data[0]["Date"]);
+  const endDate = new Date(data[data.length - 1]["Date"]);
   const dateRange = generateDateRange(startDate, endDate);
   function generateDateRange(startDate: Date, endDate: Date): Date[] {
     const dateRange: Date[] = [];
@@ -203,7 +207,7 @@ function createDashboard(data: any, windowSize: number) {
   
     while (currentDate <= endDate) {
       dateRange.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setDate(currentDate.getDate() + 7);
     }
   
     return dateRange;
@@ -212,7 +216,7 @@ function createDashboard(data: any, windowSize: number) {
   // Calculate the cumulative profits
   let cumulativeProfit = 0;
   const cumulativeProfits = dateRange.map((currentDate: Date) => {
-    const soldItemsOnOrBeforeCurrentDate = loadedData.filter((row: any) => {
+    const soldItemsOnOrBeforeCurrentDate = data.filter((row: any) => {
       const date = new Date(row["Date"]);
       return date <= currentDate;
     });
@@ -234,7 +238,7 @@ function createDashboard(data: any, windowSize: number) {
     const endDate = new Date(currentDate);
     endDate.setDate(endDate.getDate() + halfWindowSize);
   
-    const windowData = loadedData.filter((row: any) => {
+    const windowData = data.filter((row: any) => {
       const date = new Date(row["Date"]);
       return date >= startDate && date <= endDate;
     });
