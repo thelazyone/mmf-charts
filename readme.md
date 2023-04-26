@@ -1,3 +1,5 @@
+Live Demo (updated April 26th 2023): https://test.thelazyforger.com/mff-chart/
+
 # Installation
 For the moment the tool works through npm and webpack.
 
