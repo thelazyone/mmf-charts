@@ -193,17 +193,57 @@ function createDashboard(data: any, windowSize: number) {
   //const dates = data.map((row: any) => row["Date"]).map((timestamp : any) => timestamp.split(' ').join('T') + "Z");
   const dates = data.map((row: any) => new Date(row["Date"]));
 
-  // Calculate the cumulative profits
-  const cumulativeProfits = profits.map((value: number, index: number) => {
-    return profits.slice(0, index + 1).reduce((a: number, b: number) => a + b, 0);
-  });
-  //console.log("profits:" + cumulativeProfits);
+  // Defining the new temporal steps: 
+  const startDate = new Date(loadedData[0]["Date"]);
+  const endDate = new Date(loadedData[loadedData.length - 1]["Date"]);
+  const dateRange = generateDateRange(startDate, endDate);
+  function generateDateRange(startDate: Date, endDate: Date): Date[] {
+    const dateRange: Date[] = [];
+    let currentDate = new Date(startDate);
+  
+    while (currentDate <= endDate) {
+      dateRange.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  
+    return dateRange;
+  }
 
-  const movingAverageProfits = profits.map((value: number, index: number, array: number[]) => {
-    const start = Math.max(0, index - windowSize + 1);
-    const end = index;
-    const windowData = array.slice(start, end + 1);
-    const average = windowData.reduce((a: number, b: number) => a + b, 0) / windowData.length;
+  // Calculate the cumulative profits
+  let cumulativeProfit = 0;
+  const cumulativeProfits = dateRange.map((currentDate: Date) => {
+    const soldItemsOnOrBeforeCurrentDate = loadedData.filter((row: any) => {
+      const date = new Date(row["Date"]);
+      return date <= currentDate;
+    });
+  
+    const sum = soldItemsOnOrBeforeCurrentDate.reduce((total: number, row: any) => {
+      return total + Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]);
+    }, 0);
+  
+    cumulativeProfit = sum;
+    return cumulativeProfit;
+  });
+
+  // Calculate the moving average profits (daily)
+  const movingAverageProfits = dateRange.map((currentDate: Date) => {
+    const halfWindowSize = Math.floor(windowSize / 2);
+  
+    const startDate = new Date(currentDate);
+    startDate.setDate(startDate.getDate() - halfWindowSize);
+    const endDate = new Date(currentDate);
+    endDate.setDate(endDate.getDate() + halfWindowSize);
+  
+    const windowData = loadedData.filter((row: any) => {
+      const date = new Date(row["Date"]);
+      return date >= startDate && date <= endDate;
+    });
+  
+    const sum = windowData.reduce((total: number, row: any) => {
+      return total + Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]);
+    }, 0);
+  
+    const average = sum / windowSize;
     return average;
   });
 
@@ -283,14 +323,14 @@ function createDashboard(data: any, windowSize: number) {
         type: 'category',
         boundaryGap: false,
         axisLine: { onZero: true },
-        data: dates
+        data: dateRange
       },
       {
         gridIndex: 1,
         type: 'category',
         boundaryGap: false,
         axisLine: { onZero: true },
-        data: dates,
+        data: dateRange,
         position: 'top'
       }
     ],
@@ -348,3 +388,5 @@ window.addEventListener('resize', () => {
     resizeCharts(dashboardCharts);
   }
 });
+
+
