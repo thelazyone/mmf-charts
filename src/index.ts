@@ -1,6 +1,10 @@
 import * as echarts from 'echarts';
 import * as Papa from 'papaparse';
 
+// Parameters
+const timeIncrementsDays = 7;
+const averageWindowDefaultDays = 30;
+
 // HTML elements
 const loadFilesButton = document.getElementById('load-files') as HTMLButtonElement;
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -8,10 +12,12 @@ const dashboardContainer = document.getElementById('dashboard') as HTMLElement;
 const selectAllButton = document.getElementById('select-all') as HTMLElement;
 const selectNoneButton = document.getElementById('select-none') as HTMLElement;
 const recalculateButton = document.getElementById('recalculate') as HTMLElement;
+const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
 const itemList = document.getElementById('item-list') as HTMLElement;
 
-// Global Function
+// Global objects:
 const loadedData: any[] = [];
+let productsList: Map<string, string>;
 
 // Plots dashboards
 interface DashboardCharts {
@@ -91,7 +97,7 @@ fileInput.addEventListener('change', async (event) => {
   window.dispatchEvent(new Event('resize'));
 
   // Creating the list of products and users:
-  const productsList = createItemIdNameMap(loadedData);
+  productsList = createItemIdNameMap(loadedData);
   const usersList = createUserCountryMap(loadedData);
   createItemList(productsList);
 });
@@ -176,12 +182,23 @@ function updateGraphs() {
   });
 
   // Filter the data based on the selected items
-  const filteredData = loadedData.filter((row: any) => selectedItems.has(row["Item Name"]));
-  console.log("filteredData has " + filteredData.length + "items");
+  console.log("selected items:")
+  selectedItems.forEach(element => {
+    console.log(element); // 👉️ bobby, hadz, com
+  });
+  const filteredData = loadedData.filter((row: any) => {
+    // Checking if the selected items list (which is made of strings) contains 
+    // the string corresponding to the ID of the required item.
+    const shortName = productsList.get(row["Item ID"]) as string;
+    return selectedItems.has(shortName);
+
+    //console.log("short: " + shortName)
+  });
+
+  console.log("filteredData has " + filteredData.length + " items instead of " + loadedData.length);
 
   // Get the moving average window size from the input field
-  const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
-  const windowSize = parseInt(movingAverageWindowInput.value) || 7;
+  const windowSize = parseInt(movingAverageWindowInput.value) || averageWindowDefaultDays;
 
   // Call the function to update the graphs with the filtered data and the moving average window size
   dashboardCharts = createDashboard(filteredData, windowSize);
@@ -193,8 +210,6 @@ function updateGraphs() {
 function createDashboard(data: any, windowSize: number) {
   // Preparing the data for the charts:
   const profits = data.map((row: any) => Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]));
-  console.log("profits:" + profits);
-  //const dates = data.map((row: any) => row["Date"]).map((timestamp : any) => timestamp.split(' ').join('T') + "Z");
   const dates = data.map((row: any) => new Date(row["Date"]));
 
   // Defining the new temporal steps: 
@@ -207,7 +222,7 @@ function createDashboard(data: any, windowSize: number) {
   
     while (currentDate <= endDate) {
       dateRange.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 7);
+      currentDate.setDate(currentDate.getDate() + timeIncrementsDays);
     }
   
     return dateRange;
