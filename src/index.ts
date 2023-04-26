@@ -4,6 +4,7 @@ import * as Papa from 'papaparse';
 // Parameters
 const timeIncrementsDays = 7;
 const averageWindowDefaultDays = 30;
+const earningString = "Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)";
 
 // HTML elements
 const loadFilesButton = document.getElementById('load-files') as HTMLButtonElement;
@@ -19,7 +20,8 @@ const searchInput = document.getElementById('search-input') as HTMLInputElement;
 // Global objects:
 const loadedData: any[] = [];
 let productsList: Map<string, string>;
-
+let firstProductSale: Date;
+let lastProductSale: Date;
 // Plots dashboards
 interface DashboardCharts {
   chart1: echarts.ECharts;
@@ -85,7 +87,7 @@ fileInput.addEventListener('change', async (event) => {
   console.log("there are " + loadedData.length + " entires.");
   console.log(loadedData);
 
-  dashboardCharts = createDashboard(loadedData, 7);
+  dashboardCharts = createDashboard(loadedData, averageWindowDefaultDays);
 
   // Wrap the style changes in an async function and call it
   async function updateStyles() {
@@ -105,14 +107,14 @@ fileInput.addEventListener('change', async (event) => {
 
 searchInput.addEventListener('input', () => {
   const searchValue = searchInput.value.toLowerCase();
-  const labels = itemList.getElementsByTagName('label');
-  for (let i = 0; i < labels.length; i++) {
-    const label = labels[i];
-    const itemName = label.textContent ? label.textContent.toLowerCase() : '';
+  const tableRows = itemList.getElementsByTagName('tr');
+  for (let i = 0; i < tableRows.length; i++) {
+    const row = tableRows[i];
+    const itemName = row.children[1].textContent ? row.children[1].textContent.toLowerCase() : '';
     if (itemName.includes(searchValue)) {
-      label.style.display = '';
+      row.style.display = '';
     } else {
-      label.style.display = 'none';
+      row.style.display = 'none';
     }
   }
 });
@@ -168,28 +170,54 @@ function createUserCountryMap(data: any[]): Map<string, string> {
   return userCountryMap;
 }
 
-// Filling content
 function createItemList(itemIdNameMap: Map<string, string>) {
   const itemList = document.getElementById('item-list') as HTMLElement;
 
-  // NEW: Add container to wrap the list
-  const listContainer = document.createElement('div');
-  listContainer.style.overflowY = 'scroll';
-  listContainer.style.maxHeight = 'calc(100vh - 200px)';
-  itemList.appendChild(listContainer);
+  // Create a div to wrap the table
+  const tableWrapper = document.createElement('div');
+  tableWrapper.classList.add('table-wrapper');
 
-  // Fill the item list with item names
-  for (const itemName of itemIdNameMap.values()) {
-    const label = document.createElement('label');
+  // Create a table
+  const table = document.createElement('table');
+  table.classList.add('item-table');
+
+  // Create header row
+  const headerRow = document.createElement('tr');
+  const headerLabels = ['Checked', 'Product Name', 'Total Profit'];
+  headerLabels.forEach((label) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headerRow.appendChild(th);
+  });
+  table.appendChild(headerRow);
+
+  // Fill the table with item names and their total profits
+  for (const [itemId, itemName] of itemIdNameMap.entries()) {
+    const totalProfit = calculateTotalProfit(itemId, loadedData);
+
+    const tr = document.createElement('tr');
+
+    const checkboxTd = document.createElement('td');
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.value = itemName;
     input.checked = true;
-    label.appendChild(input);
-    label.appendChild(document.createTextNode(itemName));
+    checkboxTd.appendChild(input);
+    tr.appendChild(checkboxTd);
 
-    listContainer.appendChild(label); // NEW: Append label to listContainer instead of itemList
+    const itemNameTd = document.createElement('td');
+    itemNameTd.textContent = itemName;
+    tr.appendChild(itemNameTd);
+
+    const totalProfitTd = document.createElement('td');
+    totalProfitTd.textContent = totalProfit.toFixed(2);
+    tr.appendChild(totalProfitTd);
+
+    table.appendChild(tr);
   }
+
+  tableWrapper.appendChild(table);
+  itemList.appendChild(tableWrapper);
 }
 
 // Updating the graphs with the right content.
@@ -229,13 +257,13 @@ function updateGraphs() {
 
 function createDashboard(data: any, windowSize: number) {
   // Preparing the data for the charts:
-  const profits = data.map((row: any) => Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]));
+  const profits = data.map((row: any) => Number(row[earningString]));
   const dates = data.map((row: any) => new Date(row["Date"]));
 
   // Defining the new temporal steps: 
-  const startDate = new Date(data[0]["Date"]);
-  const endDate = new Date(data[data.length - 1]["Date"]);
-  const dateRange = generateDateRange(startDate, endDate);
+  firstProductSale = new Date(data[0]["Date"]);
+  lastProductSale = new Date(data[data.length - 1]["Date"]);
+  const dateRange = generateDateRange(firstProductSale, lastProductSale);
   function generateDateRange(startDate: Date, endDate: Date): Date[] {
     const dateRange: Date[] = [];
     let currentDate = new Date(startDate);
@@ -257,7 +285,7 @@ function createDashboard(data: any, windowSize: number) {
     });
   
     const sum = soldItemsOnOrBeforeCurrentDate.reduce((total: number, row: any) => {
-      return total + Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]);
+      return total + Number(row[earningString]);
     }, 0);
   
     cumulativeProfit = sum;
@@ -279,7 +307,7 @@ function createDashboard(data: any, windowSize: number) {
     });
   
     const sum = windowData.reduce((total: number, row: any) => {
-      return total + Number(row["Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)"]);
+      return total + Number(row[earningString]);
     }, 0);
   
     const average = sum / windowSize;
@@ -295,7 +323,7 @@ function createDashboard(data: any, windowSize: number) {
 
   const option1 = {
     title: {
-      text: 'Selected Products Profits',
+      text: 'Selected Products Profits (' + firstProductSale + " - " + lastProductSale + ")",
       left: 'center'
     },
     tooltip: {
@@ -429,3 +457,11 @@ window.addEventListener('resize', () => {
 });
 
 
+// TODO calculate this only once.
+function calculateTotalProfit(itemId: string, data: any[]): number {
+  const itemData = data.filter((row: any) => row["Item ID"] === itemId);
+  const totalProfit = itemData.reduce((total: number, row: any) => {
+    return total + Number(row[earningString]);
+  }, 0);
+  return totalProfit;
+}

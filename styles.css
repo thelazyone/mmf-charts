@@ -25,6 +25,7 @@ body {
     flex-direction: column;
     gap: 1rem;
     margin: 1rem;
+    width: 600px;
   }
   
   .charts {
@@ -42,11 +43,27 @@ body {
     height: 800px;
     border: 1px solid #ccc;
   }
+
   
-  .item-list label {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+  .table-wrapper {
+    max-height: 700px;
+    overflow-y: auto;
+  }
+  .item-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .item-table th {
+    position: sticky;
+    top: 0;
+    background-color: white;
+  }
+  .item-table th,
+  .item-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  .item-table th {
+    font-weight: bold;
   }
