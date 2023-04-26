@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <button id="load-files" class="center-screen">Load Files</button>
+    <input type="file" id="file-input" multiple style="display:none;">
+
+    <div class="dashboard" id="dashboard" style="display:none;">
+        <div class="sidebar">
+            <button id="select-all">Select All</button>
+            <button id="select-none">Select None</button>
+            <div id="item-list"></div>
+        </div>
+        <div class="charts">
+            <div id="chart-container-1" class="chart-container"></div>
+            <div id="chart-container-2" class="chart-container"></div>
+        </div>
+    </div>
+    
+    <script src="dist/bundle.js"></script>
+</body>
+</html>
