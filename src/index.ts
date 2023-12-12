@@ -5,6 +5,7 @@ import * as Papa from 'papaparse';
 const timeIncrementsDays = 7;
 const averageWindowDefaultDays = 30;
 const earningString = "Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)";
+const userString = "Buyer Username"
 
 // HTML elements
 const loadFilesButton = document.getElementById('load-files') as HTMLButtonElement;
@@ -14,6 +15,7 @@ const dashboardContainer = document.getElementById('dashboard') as HTMLElement;
 const selectAllButton = document.getElementById('select-all') as HTMLElement;
 const selectNoneButton = document.getElementById('select-none') as HTMLElement;
 const recalculateButton = document.getElementById('recalculate') as HTMLElement;
+const getUsersButton = document.getElementById('get-users') as HTMLElement;
 const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
 const itemList = document.getElementById('item-list') as HTMLElement;
 const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -62,6 +64,12 @@ selectNoneButton.addEventListener('click', () => {
 recalculateButton.addEventListener('click', () => {
   // Call the function to regenerate the graphs based on the selected items
   updateGraphs();
+});
+
+// Recalculate Button
+getUsersButton.addEventListener('click', () => {
+  // Call the function to regenerate the graphs based on the selected items
+  getUsers();
 });
 
 // Redraw Graphs if item list updates
@@ -254,6 +262,35 @@ function updateGraphs() {
   dashboardCharts = createDashboard(filteredData, windowSize);
   resizeCharts(dashboardCharts);
   window.dispatchEvent(new Event('resize'));
+}
+
+// Returning all the users that are involved in the selected purchases, removing duplicates.
+// TODO for now it simply returns the list in the log.
+function getUsers() {
+
+  // First finding out what items are selected
+  const selectedItems = new Set<string>();
+  const checkboxes = document.querySelectorAll('#item-list input[type="checkbox"]:checked');
+  checkboxes.forEach((checkbox) => {
+    selectedItems.add((checkbox as HTMLInputElement).value);
+  });
+
+  // Filter the data based on the selected items
+  console.log("selected items:")
+  selectedItems.forEach(element => {
+    console.log(element); // 👉️ bobby, hadz, com
+  });
+  const filteredData = loadedData.filter((row: any) => {
+    // Checking if the selected items list (which is made of strings) contains 
+    // the string corresponding to the ID of the required item.
+    const shortName = productsList.get(row["Item ID"]) as string;
+    return selectedItems.has(shortName);
+  });
+
+    
+  const usersList = filteredData.map((row: any) => String(row[userString]));
+  console.log("users are:");
+  console.log(usersList);
 }
 
 
