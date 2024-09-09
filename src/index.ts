@@ -4,11 +4,42 @@ import * as Papa from 'papaparse';
 // Parameters
 const timeIncrementsDays = 7;
 const averageWindowDefaultDays = 30;
-const earningString = "Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)";
-const userString = "Buyer Username"
+
+// Handling different file inputs
+enum FilesType {
+  None,
+  Store,
+  Frontier
+}
+let filesType: FilesType = FilesType.None;
+function getEarningString() : string {
+  switch (filesType) {
+    case FilesType.Store: {
+      return "Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)";
+    }
+    case FilesType.Frontier: {
+      return "Creator Net Earnings Amount (Item Price - Commission - Payment Processing Fees - Credits used in this Item)";
+    }
+    default: {
+      // TODO throw exception. Should never land here, actually.
+      console.log("File type not recognized!");
+      return "";
+    }
+  }
+}
+function getUserString() : string {
+  // Same for all for now.
+  return "Buyer Username";
+}
+function getDateString() : string {
+  // Same for all for now.
+  return "Date";
+}
+
 
 // HTML elements
-const loadFilesButton = document.getElementById('load-files') as HTMLButtonElement;
+const loadFilesStoreButton = document.getElementById('load-files-store') as HTMLButtonElement;
+const loadFilesFrontierButton = document.getElementById('load-files-frontier') as HTMLButtonElement;
 const welcomeContainer = document.getElementById('welcome-container') as HTMLButtonElement;
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
 const dashboardContainer = document.getElementById('dashboard') as HTMLElement;
@@ -32,12 +63,20 @@ interface DashboardCharts {
 }
 let dashboardCharts: DashboardCharts | undefined;
 
+
 // Event Listeners
 
 // Loads Button
-loadFilesButton.addEventListener('click', () => {
+loadFilesStoreButton.addEventListener('click', () => {
   fileInput.click();
+  filesType = FilesType.Store;
 });
+
+loadFilesFrontierButton.addEventListener('click', () => {
+  fileInput.click();
+  filesType = FilesType.Frontier;
+});
+
 
 // Select All Items Radio Button
 selectAllButton.addEventListener('click', () => {
@@ -91,7 +130,7 @@ fileInput.addEventListener('change', async (event) => {
   }
 
   // Add this line to sort the loadedData by date
-  loadedData.sort((a: any, b: any) => new Date(a["Date"]).getTime() - new Date(b["Date"]).getTime());
+  loadedData.sort((a: any, b: any) => new Date(a[getDateString()]).getTime() - new Date(b[getDateString()]).getTime());
 
   console.log("there are " + loadedData.length + " entires.");
   console.log(loadedData);
@@ -101,7 +140,8 @@ fileInput.addEventListener('change', async (event) => {
   // Wrap the style changes in an async function and call it
   async function updateStyles() {
     welcomeContainer.style.display = 'none';
-    loadFilesButton.style.display = 'none';
+    loadFilesStoreButton.style.display = 'none';
+    loadFilesFrontierButton.style.display = 'none';
     dashboardContainer.style.display = 'flex';
   }
 
@@ -287,8 +327,7 @@ function getUsers() {
     return selectedItems.has(shortName);
   });
 
-    
-  const usersList = filteredData.map((row: any) => String(row[userString]));
+  const usersList = filteredData.map((row: any) => String(row[getUserString()]));
   console.log("users are:");
   console.log(usersList);
 }
@@ -296,12 +335,12 @@ function getUsers() {
 
 function createDashboard(data: any, windowSize: number) {
   // Preparing the data for the charts:
-  const profits = data.map((row: any) => Number(row[earningString]));
-  const dates = data.map((row: any) => new Date(row["Date"]));
+  const profits = data.map((row: any) => Number(row[getEarningString()]));
+  const dates = data.map((row: any) => new Date(row[getDateString()]));
 
   // Defining the new temporal steps: 
-  firstProductSale = new Date(data[0]["Date"]);
-  lastProductSale = new Date(data[data.length - 1]["Date"]);
+  firstProductSale = new Date(data[0][getDateString()]);
+  lastProductSale = new Date(data[data.length - 1][getDateString()]);
   const dateRange = generateDateRange(firstProductSale, lastProductSale);
   function generateDateRange(startDate: Date, endDate: Date): Date[] {
     const dateRange: Date[] = [];
@@ -319,12 +358,12 @@ function createDashboard(data: any, windowSize: number) {
   let cumulativeProfit = 0;
   const cumulativeProfits = dateRange.map((currentDate: Date) => {
     const soldItemsOnOrBeforeCurrentDate = data.filter((row: any) => {
-      const date = new Date(row["Date"]);
+      const date = new Date(row[getDateString()]);
       return date <= currentDate;
     });
   
     const sum = soldItemsOnOrBeforeCurrentDate.reduce((total: number, row: any) => {
-      return total + Number(row[earningString]);
+      return total + Number(row[getEarningString()]);
     }, 0);
   
     cumulativeProfit = sum;
@@ -341,12 +380,12 @@ function createDashboard(data: any, windowSize: number) {
     endDate.setDate(endDate.getDate() + halfWindowSize);
   
     const windowData = data.filter((row: any) => {
-      const date = new Date(row["Date"]);
+      const date = new Date(row[getDateString()]);
       return date >= startDate && date <= endDate;
     });
   
     const sum = windowData.reduce((total: number, row: any) => {
-      return total + Number(row[earningString]);
+      return total + Number(row[getEarningString()]);
     }, 0);
   
     const average = sum / windowSize;
@@ -499,8 +538,9 @@ window.addEventListener('resize', () => {
 // TODO calculate this only once.
 function calculateTotalProfit(itemId: string, data: any[]): number {
   const itemData = data.filter((row: any) => row["Item ID"] === itemId);
+
   const totalProfit = itemData.reduce((total: number, row: any) => {
-    return total + Number(row[earningString]);
+    return total + Number(row[getEarningString()]);
   }, 0);
   return totalProfit;
 }
