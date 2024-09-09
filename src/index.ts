@@ -15,7 +15,7 @@ let filesType: FilesType = FilesType.None;
 function getEarningString() : string {
   switch (filesType) {
     case FilesType.Store: {
-      return "Creator Net Earnings Amount (Item Price - 8% Commission - Payment Processing Fees)";
+      return "Creator Net Earnings Amount (Item Price - Commission - Payment Processing Fees)";
     }
     case FilesType.Frontier: {
       return "Creator Net Earnings Amount (Item Price - Commission - Payment Processing Fees - Credits used in this Item)";
@@ -68,13 +68,15 @@ let dashboardCharts: DashboardCharts | undefined;
 
 // Loads Button
 loadFilesStoreButton.addEventListener('click', () => {
-  fileInput.click();
+  console.log("Loading STORE files...");
   filesType = FilesType.Store;
+  fileInput.click();
 });
 
 loadFilesFrontierButton.addEventListener('click', () => {
-  fileInput.click();
+  console.log("Loading FRONTIER files...");
   filesType = FilesType.Frontier;
+  fileInput.click();
 });
 
 
@@ -133,7 +135,7 @@ fileInput.addEventListener('change', async (event) => {
   loadedData.sort((a: any, b: any) => new Date(a[getDateString()]).getTime() - new Date(b[getDateString()]).getTime());
 
   console.log("there are " + loadedData.length + " entires.");
-  console.log(loadedData);
+  //console.log(loadedData); // TODO heavy on console
 
   dashboardCharts = createDashboard(loadedData, averageWindowDefaultDays);
 
@@ -335,6 +337,8 @@ function getUsers() {
 
 function createDashboard(data: any, windowSize: number) {
   // Preparing the data for the charts:
+  console.log("string to read are " + getEarningString());
+
   const profits = data.map((row: any) => Number(row[getEarningString()]));
   const dates = data.map((row: any) => new Date(row[getDateString()]));
 
