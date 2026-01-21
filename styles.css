@@ -74,3 +74,32 @@ body {
     align-items: center;
     gap: 1rem; /* Adjust the space between the text and the button */
   }
+
+  .controls-container {
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 0;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+
+  .control-group input,
+  .control-group select {
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }

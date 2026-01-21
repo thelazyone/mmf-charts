@@ -2,8 +2,8 @@ import * as echarts from 'echarts';
 import * as Papa from 'papaparse';
 
 // Parameters
-const timeIncrementsDays = 7;
 const averageWindowDefaultDays = 30;
+const samplingSpaceDefaultDays = 7;
 
 // Handling different file inputs
 enum FilesType {
@@ -15,10 +15,10 @@ let filesType: FilesType = FilesType.None;
 function getEarningString() : string {
   switch (filesType) {
     case FilesType.Store: {
-      return "Creator Net Earnings Amount (Item Price - Commission - Payment Processing Fees)";
+      return "Creator Net Earnings Amount";
     }
     case FilesType.Frontier: {
-      return "Creator Net Earnings Amount (Item Price - Commission - Payment Processing Fees - Credits used in this Item)";
+      return "Creator Net Earnings Amount";
     }
     default: {
       // TODO throw exception. Should never land here, actually.
@@ -48,6 +48,7 @@ const selectNoneButton = document.getElementById('select-none') as HTMLElement;
 const recalculateButton = document.getElementById('recalculate') as HTMLElement;
 const getUsersButton = document.getElementById('get-users') as HTMLElement;
 const movingAverageWindowInput = document.getElementById('moving-average-window') as HTMLInputElement;
+const samplingSpaceSelect = document.getElementById('sampling-space') as HTMLSelectElement;
 const itemList = document.getElementById('item-list') as HTMLElement;
 const searchInput = document.getElementById('search-input') as HTMLInputElement;
 
@@ -135,9 +136,13 @@ fileInput.addEventListener('change', async (event) => {
   loadedData.sort((a: any, b: any) => new Date(a[getDateString()]).getTime() - new Date(b[getDateString()]).getTime());
 
   console.log("there are " + loadedData.length + " entires.");
+  console.log("DEBUG: First row keys:", Object.keys(loadedData[0]));
+  console.log("DEBUG: First row sample:", loadedData[0]);
+  console.log("DEBUG: Earnings value from first row:", loadedData[0]["Creator Net Earnings Amount"]);
+  console.log("DEBUG: Earnings value as Number:", Number(loadedData[0]["Creator Net Earnings Amount"]));
   //console.log(loadedData); // TODO heavy on console
 
-  dashboardCharts = createDashboard(loadedData, averageWindowDefaultDays);
+  dashboardCharts = createDashboard(loadedData, averageWindowDefaultDays, samplingSpaceDefaultDays);
 
   // Wrap the style changes in an async function and call it
   async function updateStyles() {
@@ -300,8 +305,11 @@ function updateGraphs() {
   // Get the moving average window size from the input field
   const windowSize = parseInt(movingAverageWindowInput.value) || averageWindowDefaultDays;
 
+  // Get the sampling space from the select dropdown
+  const samplingSpace = parseFloat(samplingSpaceSelect.value) || samplingSpaceDefaultDays;
+
   // Call the function to update the graphs with the filtered data and the moving average window size
-  dashboardCharts = createDashboard(filteredData, windowSize);
+  dashboardCharts = createDashboard(filteredData, windowSize, samplingSpace);
   resizeCharts(dashboardCharts);
   window.dispatchEvent(new Event('resize'));
 }
@@ -335,7 +343,7 @@ function getUsers() {
 }
 
 
-function createDashboard(data: any, windowSize: number) {
+function createDashboard(data: any, windowSize: number, samplingSpaceDays: number) {
   // Preparing the data for the charts:
   console.log("string to read are " + getEarningString());
 
@@ -345,14 +353,15 @@ function createDashboard(data: any, windowSize: number) {
   // Defining the new temporal steps: 
   firstProductSale = new Date(data[0][getDateString()]);
   lastProductSale = new Date(data[data.length - 1][getDateString()]);
-  const dateRange = generateDateRange(firstProductSale, lastProductSale);
-  function generateDateRange(startDate: Date, endDate: Date): Date[] {
+  const dateRange = generateDateRange(firstProductSale, lastProductSale, samplingSpaceDays);
+  function generateDateRange(startDate: Date, endDate: Date, incrementDays: number): Date[] {
     const dateRange: Date[] = [];
     let currentDate = new Date(startDate);
+    const incrementMs = incrementDays * 24 * 60 * 60 * 1000; // Convert days to milliseconds
   
     while (currentDate <= endDate) {
       dateRange.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + timeIncrementsDays);
+      currentDate = new Date(currentDate.getTime() + incrementMs);
     }
   
     return dateRange;

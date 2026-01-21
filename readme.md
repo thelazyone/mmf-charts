@@ -9,5 +9,9 @@ And for papaparse: <code>npm install --save papaparse</code>
 
 To avoid local paths to mess stuff up, I've added webpack as part of the local scripts of the package.json. this way, you can package the project every time you call <code>npm run build</code>.
 
-I'd recommend the "Live Server" plugin for VSCode to open your solution locally with one click, but I'm sure there's plenty of other options too.
+# Local Test
 
+A simple call to python -m http.server 8000 puts up a temp instance of the tool to 127.0.0.1:8000.
+
+# Deploy
+Copy the content of the 
