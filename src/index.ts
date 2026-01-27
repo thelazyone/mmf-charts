@@ -18,7 +18,7 @@ function getEarningString() : string {
       return "Creator Net Earnings Amount";
     }
     case FilesType.Frontier: {
-      return "Creator Net Earnings Amount";
+      return "Creator Net Earnings Amount (Item Price - Commission - Payment Processing Fees - Credits used in this Item)";
     }
     default: {
       // TODO throw exception. Should never land here, actually.
@@ -34,6 +34,10 @@ function getUserString() : string {
 function getDateString() : string {
   // Same for all for now.
   return "Date";
+}
+function getPriceString() : string {
+  // Same for both Store and Frontier
+  return "Item Price (after discount & excluding VAT/Sales Tax)";
 }
 
 
@@ -136,10 +140,6 @@ fileInput.addEventListener('change', async (event) => {
   loadedData.sort((a: any, b: any) => new Date(a[getDateString()]).getTime() - new Date(b[getDateString()]).getTime());
 
   console.log("there are " + loadedData.length + " entires.");
-  console.log("DEBUG: First row keys:", Object.keys(loadedData[0]));
-  console.log("DEBUG: First row sample:", loadedData[0]);
-  console.log("DEBUG: Earnings value from first row:", loadedData[0]["Creator Net Earnings Amount"]);
-  console.log("DEBUG: Earnings value as Number:", Number(loadedData[0]["Creator Net Earnings Amount"]));
   //console.log(loadedData); // TODO heavy on console
 
   dashboardCharts = createDashboard(loadedData, averageWindowDefaultDays, samplingSpaceDefaultDays);
@@ -240,7 +240,7 @@ function createItemList(itemIdNameMap: Map<string, string>) {
 
   // Create header row
   const headerRow = document.createElement('tr');
-  const headerLabels = ['Checked', 'Product Name', 'Total Profit'];
+  const headerLabels = ['Checked', 'Product Name', 'Total Revenue', 'Total Profit'];
   headerLabels.forEach((label) => {
     const th = document.createElement('th');
     th.textContent = label;
@@ -248,8 +248,9 @@ function createItemList(itemIdNameMap: Map<string, string>) {
   });
   table.appendChild(headerRow);
 
-  // Fill the table with item names and their total profits
+  // Fill the table with item names, total revenue, and their total profits
   for (const [itemId, itemName] of itemIdNameMap.entries()) {
+    const totalRevenue = calculateTotalRevenue(itemId, loadedData);
     const totalProfit = calculateTotalProfit(itemId, loadedData);
 
     const tr = document.createElement('tr');
@@ -265,6 +266,10 @@ function createItemList(itemIdNameMap: Map<string, string>) {
     const itemNameTd = document.createElement('td');
     itemNameTd.textContent = itemName;
     tr.appendChild(itemNameTd);
+
+    const totalRevenueTd = document.createElement('td');
+    totalRevenueTd.textContent = totalRevenue.toFixed(2);
+    tr.appendChild(totalRevenueTd);
 
     const totalProfitTd = document.createElement('td');
     totalProfitTd.textContent = totalProfit.toFixed(2);
@@ -405,6 +410,44 @@ function createDashboard(data: any, windowSize: number, samplingSpaceDays: numbe
     return average;
   });
 
+  // Calculate the cumulative revenue (total money paid by customers)
+  let cumulativeRevenue = 0;
+  const cumulativeRevenues = dateRange.map((currentDate: Date) => {
+    const soldItemsOnOrBeforeCurrentDate = data.filter((row: any) => {
+      const date = new Date(row[getDateString()]);
+      return date <= currentDate;
+    });
+  
+    const sum = soldItemsOnOrBeforeCurrentDate.reduce((total: number, row: any) => {
+      return total + Number(row[getPriceString()]);
+    }, 0);
+  
+    cumulativeRevenue = sum;
+    return cumulativeRevenue;
+  });
+
+  // Calculate the moving average revenue (daily)
+  const movingAverageRevenues = dateRange.map((currentDate: Date) => {
+    const halfWindowSize = Math.floor(windowSize / 2);
+  
+    const startDate = new Date(currentDate);
+    startDate.setDate(startDate.getDate() - halfWindowSize);
+    const endDate = new Date(currentDate);
+    endDate.setDate(endDate.getDate() + halfWindowSize);
+  
+    const windowData = data.filter((row: any) => {
+      const date = new Date(row[getDateString()]);
+      return date >= startDate && date <= endDate;
+    });
+  
+    const sum = windowData.reduce((total: number, row: any) => {
+      return total + Number(row[getPriceString()]);
+    }, 0);
+  
+    const average = sum / windowSize;
+    return average;
+  });
+
   // Preparing the plots layout:
   const chartContainer1 = document.getElementById('chart-container-1');
   //const chartContainer2 = document.getElementById('chart-container-2');
@@ -414,7 +457,7 @@ function createDashboard(data: any, windowSize: number, samplingSpaceDays: numbe
 
   const option1 = {
     title: {
-      text: 'Selected Products Profits\n(' + firstProductSale + " - " + lastProductSale + ")",
+      text: 'Selected Products - Revenue & Profits\n(' + firstProductSale + " - " + lastProductSale + ")",
       left: 'center'
     },
     tooltip: {
@@ -424,7 +467,7 @@ function createDashboard(data: any, windowSize: number, samplingSpaceDays: numbe
       }
     },
     legend: {
-      data: ['Cumulative', 'Averaged'],
+      data: ['Cumulative Profit', 'Daily Profit averaged', 'Cumulative Revenue', 'Daily Revenue averaged'],
       left: 10
     },
     toolbox: {
@@ -494,12 +537,12 @@ function createDashboard(data: any, windowSize: number, samplingSpaceDays: numbe
     ],
     yAxis: [
       {
-        name: 'Total Profit ($)',
+        name: 'Total Amount ($)',
         type: 'value',
       },
       {
         gridIndex: 1,
-        name: 'Daily Average Profit ($)',
+        name: 'Daily Average ($)',
         type: 'value',
         inverse: true
       }
@@ -510,8 +553,17 @@ function createDashboard(data: any, windowSize: number, samplingSpaceDays: numbe
       name: 'Cumulative Profit',
       type: 'line',
       symbolSize: 8,
+      itemStyle: { color: '#5470c6' },
       // prettier-ignore
       data: cumulativeProfits
+    },
+    {
+      name: 'Cumulative Revenue',
+      type: 'line',
+      symbolSize: 8,
+      itemStyle: { color: '#91cc75' },
+      // prettier-ignore
+      data: cumulativeRevenues
     },
     {
       name: 'Daily Profit averaged',
@@ -519,8 +571,19 @@ function createDashboard(data: any, windowSize: number, samplingSpaceDays: numbe
       xAxisIndex: 1,
       yAxisIndex: 1,
       symbolSize: 8,
+      itemStyle: { color: '#5470c6' },
       // prettier-ignore
       data: movingAverageProfits
+    },
+    {
+      name: 'Daily Revenue averaged',
+      type: 'line',
+      xAxisIndex: 1,
+      yAxisIndex: 1,
+      symbolSize: 8,
+      itemStyle: { color: '#91cc75' },
+      // prettier-ignore
+      data: movingAverageRevenues
     }
   ]
 };
@@ -556,4 +619,13 @@ function calculateTotalProfit(itemId: string, data: any[]): number {
     return total + Number(row[getEarningString()]);
   }, 0);
   return totalProfit;
+}
+
+function calculateTotalRevenue(itemId: string, data: any[]): number {
+  const itemData = data.filter((row: any) => row["Item ID"] === itemId);
+
+  const totalRevenue = itemData.reduce((total: number, row: any) => {
+    return total + Number(row[getPriceString()]);
+  }, 0);
+  return totalRevenue;
 }
