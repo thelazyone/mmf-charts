@@ -21,4 +21,4 @@ To avoid local paths to mess stuff up, I've added webpack as part of the local s
 A simple call to python -m http.server 8000 puts up a temp instance of the tool to 127.0.0.1:8000.
 
 # Deploy
-Copy the content of the 
+Copy the `/dist` folder and the `/src` folder, as well as the content of the main folder on your hosting space via FTP, and enjoy. 
